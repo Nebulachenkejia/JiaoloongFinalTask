@@ -36,8 +36,21 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Src/freertos.c
         Core/Src/stm32f4xx_hal_timebase_tim.c
         Core/Inc/FreeRTOSConfig.h
-        UserCode/Src/user_tasks.cpp
-        UserCode/Inc/user_tasks.h)
+        UserCode/RTOS/user_tasks.cpp
+        UserCode/RTOS/user_tasks.h
+        UserCode/imu/bmi088.h
+        UserCode/imu/imu.h
+        UserCode/imu/mahony.h
+        UserCode/imu/imu.cpp
+        UserCode/Motor/GM6020.cpp
+        UserCode/Motor/GM6020.h
+        UserCode/imu/bmi088.cpp
+        UserCode/Motor/pid.cpp
+        UserCode/Motor/pid.h
+        UserCode/RC/DT7_RC.cpp
+        UserCode/RC/DT7_RC.h
+        UserCode/app/callback.cpp
+        UserCode/app/callback.h)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
@@ -50,7 +63,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-        UserCode/Src/user_tasks.cpp
+        UserCode/RTOS/user_tasks.cpp
 )
 
 # Add include paths

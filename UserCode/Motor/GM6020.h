@@ -1,0 +1,10 @@
+//
+// Created by Nebula on 2025/11/11.
+//
+
+#ifndef JIAOLOONGFINALTASK_GM6020_H
+#define JIAOLOONGFINALTASK_GM6020_H
+
+class GM6020 {};
+
+#endif //JIAOLOONGFINALTASK_GM6020_H
