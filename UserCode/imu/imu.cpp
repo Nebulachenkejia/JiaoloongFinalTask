@@ -2,8 +2,8 @@
 // Created by Nebula on 2025/11/11.
 //
 #include "imu.h"
-#define RAD_TO_DEG  (180.0f / M_PI)
-#define DEG_TO_RAD  (M_PI / 180.0f)
+#define RAD_TO_DEG  (180.0f / 3.14159265358979323846)
+#define DEG_TO_RAD  (3.14159265358979323846 / 180.0f)
 #define BMI088_ACCEL_X_L  0x12
 #define BMI088_ACCEL_X_H  0x13
 #define BMI088_ACCEL_Y_H  0x15
@@ -19,7 +19,7 @@
 
 IMU::IMU(const float& dt, const float& kg, const float& g_thres,
      const float R_imu[3][3], const float gyro_bias[3])
-    : mahony_(dt, kg, g_thres), gyro_bias_{gyro_bias[0], gyro_bias[1], gyro_bias[2]}
+    //: mahony_(dt, kg, g_thres), gyro_bias_{gyro_bias[0], gyro_bias[1], gyro_bias[2]}
 {
     //赋值R_imu_
     for (int i=0; i<3; ++i) {
