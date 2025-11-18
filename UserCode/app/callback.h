@@ -5,23 +5,22 @@
 #ifndef JIAOLOONGFINALTASK_CALLBACK_H
 #define JIAOLOONGFINALTASK_CALLBACK_H
 
-#include "../imu/imu.h"
-#include "tim.h"
-#include "main.h"
-#include <cstring>
-#include "../RC/DT7_RC.h"
-#include "cmsis_os2.h"
+    #include "main.h"
+    #include "stm32f4xx_hal_can.h"
+    #include "stm32f4xx_hal.h"
+    #include "can.h"
+    #include "cmsis_os.h"
+    #include "usart.h"
+    #include "queue.h"
 
-//头文件保护
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-
-void user_tasks_init();
-
-#ifdef __cplusplus
+    #endif
+#include "../imu/imu.h"
+#include "../RC/DT7_RC.h"
+#include "../Motor/GM6020.h"
+#include "string.h"
+    #ifdef __cplusplus
 }
 #endif
-
 #endif //JIAOLOONGFINALTASK_CALLBACK_H

@@ -4,7 +4,9 @@
 #include "mahony.h"
 #include "bmi088.h"
 #include <math.h>
-
+#ifdef __cplusplus
+extern "C" {
+    #endif
 // 欧拉角
 typedef struct EulerAngle {
   float yaw;
@@ -58,7 +60,10 @@ private:
   // 陀螺仪零飘补偿项
   float gyro_bias_[3]; //单位应为角速度rad/s
   // Mahony解算
-  //Mahony mahony_;
+  Mahony mahony_;
 };
 
+    #ifdef __cplusplus
+}
+#endif
 #endif // IMU_H

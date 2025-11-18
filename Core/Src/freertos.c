@@ -26,6 +26,15 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#ifdef __cplusplus
+extern "C" {
+    #endif
+
+    #include "../../UserCode/RTOS/user_tasks.h"
+
+    #ifdef __cplusplus
+}
+#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,7 +44,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+extern uint8_t count;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,6 +54,26 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+const osThreadAttr_t controlTask_attributes = {
+    .name = "controlTask",
+    .stack_size = 512 * 4,
+    .priority = (osPriority_t) osPriorityNormal,
+  };
+const osThreadAttr_t imuTask_attributes = {
+    .name = "controlTask",
+    .stack_size = 512 * 4,
+    .priority = (osPriority_t) osPriorityNormal,
+  };
+const osThreadAttr_t motorTask_attributes = {
+    .name = "controlTask",
+    .stack_size = 512 * 4,
+    .priority = (osPriority_t) osPriorityNormal,
+  };
+const osThreadAttr_t canTxTask_attributes = {
+    .name = "controlTask",
+    .stack_size = 512 * 4,
+    .priority = (osPriority_t) osPriorityNormal,
+  };
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -75,19 +104,22 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+    /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
+    /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
 
   /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
+    /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+    /* add queues, ... */
+    rcQueueHandle            = osMessageQueueNew(8, 32, NULL);
+    motorFeedbackQueueHandle = osMessageQueueNew(8, sizeof(MotorFeedbackMsg), NULL);
+    canTxQueueHandle         = osMessageQueueNew(8, sizeof(CanTxMsg), NULL);
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -95,11 +127,16 @@ void MX_FREERTOS_Init(void) {
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+    /* add threads, ... */
+    osThreadNew(controlTask, NULL, &controlTask_attributes);
+    osThreadNew(imuTask,     NULL, &imuTask_attributes);
+    osThreadNew(motorTask,   NULL, &motorTask_attributes);
+    osThreadNew(canTxTask,   NULL, &canTxTask_attributes);
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
+    /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 
 }

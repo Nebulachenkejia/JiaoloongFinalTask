@@ -1,6 +1,7 @@
 #ifndef MAHONY_H
 #define MAHONY_H
 
+#include "string.h"
 const float gravity_accel = 9.8f;
 
 class Mahony {

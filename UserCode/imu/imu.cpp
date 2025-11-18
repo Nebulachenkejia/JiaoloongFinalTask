@@ -19,7 +19,7 @@
 
 IMU::IMU(const float& dt, const float& kg, const float& g_thres,
      const float R_imu[3][3], const float gyro_bias[3])
-    //: mahony_(dt, kg, g_thres), gyro_bias_{gyro_bias[0], gyro_bias[1], gyro_bias[2]}
+    : gyro_bias_{gyro_bias[0], gyro_bias[1], gyro_bias[2]},mahony_(dt, kg, g_thres)
 {
     //赋值R_imu_
     for (int i=0; i<3; ++i) {
@@ -118,7 +118,7 @@ void IMU::update(void) {
     }
 
     //mahony更新四元数
-    //mahony_.update(q_, gyro_world_, accel_world_);
+    mahony_.update(q_, gyro_world_, accel_world_);
 
     //四元数转欧拉角
     float w = q_[0], x = q_[1], y = q_[2], z = q_[3];

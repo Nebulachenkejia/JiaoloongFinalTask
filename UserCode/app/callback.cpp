@@ -4,36 +4,53 @@
 
 #include "callback.h"
 
-#define USART3_RX_BUF_SIZE 32
-#define USART3_RX_DATA_SIZE 32
-extern UART_HandleTypeDef huart3;
-extern uint64_t msg_time;
-extern uint8_t rx_buf[USART3_RX_BUF_SIZE];
-extern uint8_t rx_data[USART3_RX_DATA_SIZE];
 
+//外部队列句柄
+extern osMessageQueueId_t rcQueueHandle;
+extern osMessageQueueId_t motorFeedbackQueueHandle;
 
-//float R_imu_[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-//float gyro_bias_[3] = {0.0f, 0.0f, 0.0f};
-//IMU imu(0.001,0.1,0,R_imu_, gyro_bias_); //待优化
-/*void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-        //待优化
-}
-*/
-DT7_RC rc;
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+//电机反馈报文解包
+extern CAN_RxHeaderTypeDef rx_header;
+extern GM6020 pitchMotor;
+extern GM6020 yawMotor;
+extern uint8_t motor_msg_data[8];
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    if (huart->Instance == huart3.Instance)
+    if (hcan->Instance == CAN1)
     {
-        static bool rc_inited = false;
-        if (!rc_inited)
+        HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, motor_msg_data);
+
+        switch (rx_header.StdId)
         {
-            rc.init();
-            rc_inited = true;
+            case 0x208:
+                pitchMotor.canRxMsgCallback(motor_msg_data);
+		break;
+
+            case 0x205:
+                yawMotor.canRxMsgCallback(motor_msg_data);
+                break;
+
+            default:
+                break;
+			
         }
-        rc.current_time = HAL_GetTick();
-        rc.isConnected =  (rc.current_time - rc.last_time) < 100;
-        memcpy(rx_data, rx_buf, Size);
-        rc.handle(rx_data, Size);
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx_buf, USART3_RX_BUF_SIZE);
+			
     }
 }
+
+//外部缓冲区
+extern uint8_t rc_rx_buf[32];
+extern uint8_t rc_rx_data[32];
+
+//遥控器空闲中断（DMA接收完成）
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+{
+  if (huart->Instance == USART3) 
+	{
+	    memcpy(rc_rx_data, rc_rx_buf, Size);
+            osMessageQueuePut(rcQueueHandle, rc_rx_data, 0, 0);
+            HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rc_rx_buf, 32);
+	}
+}
+
+

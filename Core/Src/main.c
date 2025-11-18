@@ -19,15 +19,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "can.h"
 #include "dma.h"
 #include "spi.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+//#include "../../UserCode/app/callback.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,9 +50,25 @@
 /* USER CODE BEGIN PV */
 #define USART3_RX_BUF_SIZE 32
 #define USART3_RX_DATA_SIZE 32
-uint64_t msg_time;
-uint8_t rx_buf[USART3_RX_BUF_SIZE];
-uint8_t rx_data[USART3_RX_DATA_SIZE];
+uint8_t rc_rx_buf[USART3_RX_BUF_SIZE];
+uint8_t rc_rx_data[USART3_RX_DATA_SIZE];
+uint8_t stop_flag = 1;
+uint8_t motor_msg_data[8];
+uint32_t can_tx_mail_box_;
+CAN_RxHeaderTypeDef rx_header;
+
+CAN_FilterTypeDef filter_config = {
+    .FilterIdHigh = 0x0000,
+    .FilterIdLow = 0x0000,
+    .FilterMaskIdHigh = 0x0000,
+    .FilterMaskIdLow = 0x0000,
+    .FilterFIFOAssignment = CAN_FILTER_FIFO0,
+    .FilterBank = 0,
+    .FilterMode = CAN_FILTERMODE_IDMASK,
+    .FilterScale = CAN_FILTERSCALE_32BIT,
+    .FilterActivation = ENABLE,
+};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,10 +114,15 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_SPI1_Init();
-  MX_TIM6_Init();
   MX_USART3_UART_Init();
+  MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx_buf, USART3_RX_BUF_SIZE);
+  //开启CAN接收
+    HAL_CAN_Start(&hcan1);
+    HAL_CAN_ConfigFilter(&hcan1, &filter_config);
+    HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+  //开启空闲中断DMA接收遥控器数据
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rc_rx_buf, USART3_RX_BUF_SIZE);
   /* USER CODE END 2 */
 
   /* Init scheduler */

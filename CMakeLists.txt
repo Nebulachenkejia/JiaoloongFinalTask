@@ -50,7 +50,10 @@ add_executable(${CMAKE_PROJECT_NAME}
         UserCode/RC/DT7_RC.cpp
         UserCode/RC/DT7_RC.h
         UserCode/app/callback.cpp
-        UserCode/app/callback.h)
+        UserCode/app/callback.h
+        UserCode/imu/mahony.cpp
+        UserCode/imu/matrix.h
+        UserCode/RTOS/user_taskes_cpp.hpp)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
