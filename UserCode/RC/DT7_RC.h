@@ -10,18 +10,13 @@
 extern "C" {
     #endif
 class DT7_RC {
-public:
-    enum SwitchState : uint8_t
-    {
-        SWITCH_UP   = 0,
-        SWITCH_MID  = 1,
-        SWITCH_DOWN = 2
-    };
+private:
+
 
     // 原始数据
     struct __packed DT7_RC_Raw
     {
-        uint16_t ch[4];      // ch0~ch3
+        uint16_t ch[4];
 
         uint8_t s1;
         uint8_t s2;
@@ -48,6 +43,13 @@ public:
         }
     };
 
+public:
+    enum SwitchState : uint8_t
+    {
+        SWITCH_UP   = 0,
+        SWITCH_MID  = 1,
+        SWITCH_DOWN = 2
+    };
     // 解析后的标准化数据
     struct __packed DT7_RC_Data
     {
@@ -58,33 +60,26 @@ public:
 
         DT7_RC_Data()
         {
-            for (int i = 0; i < 4; i++)
+            for(int i = 0; i < 4; i++)
                 ch[i] = 0.0f;
 
             s1 = s2 = SWITCH_DOWN;
         }
     };
 
-
-public:
-    DT7_RC();
-
+    DT7_RC(){}
     void init();
     void handle(const uint8_t* data, uint8_t size);
 
     // 公共获取接口
     inline const DT7_RC_Data& getData() const { return dt7_; }
-    inline const DT7_RC_Raw&  getRaw()  const { return raw_; }
-
-    bool isConnected = false;
+    //inline const DT7_RC_Raw&  getRaw()  const { return raw_; }
 
 private:
     DT7_RC_Raw raw_;
     DT7_RC_Data dt7_;
-
+    bool isConnected = false;
     uint32_t last_update_time = 0;
-
-private:
     static float linearMapping(int16_t x,
                         int16_t in_min, int16_t in_max,
                         float out_min, float out_max);

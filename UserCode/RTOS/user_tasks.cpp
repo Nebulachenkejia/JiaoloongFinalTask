@@ -12,16 +12,16 @@ static const float R_imu_default[3][3] = {
     {0,0,1}
 };
 static const float gyro_bias_default[3] = {0,0,0};
-IMU imu(0.001f, 0.1f, 0.5f, R_imu_default, gyro_bias_default);
+IMU imu(0.004f, 0.01f, 1.0f, R_imu_default, gyro_bias_default);
 
 // RC
 DT7_RC rc;
 
 // 电机
-GM6020 pitchMotor(5.0f, 0.0f, 0.0f, 1000.0f, 1000.0f,
-    10.0f, 0.0f, 0.0f, 1600.0f, 1800.0f, 36.0f, 4);
-GM6020 yawMotor(5.0f, 0.0f, 0.0f, 1000.0f, 1000.0f,
-    10.0f, 0.0f, 0.0f, 1600.0f, 1800.0f, 36.0f, 1);
+GM6020 pitchMotor(0.0f, 0.0f, 0.0f, 1000.0f, 1000.0f, 0.01f,
+    0.007f, 0.0f, 0.0f, 1600.0f, 1800.0f, 0.01f, 36.0f, 4);
+GM6020 yawMotor(4.0f, 0.0f, 200.0f, 10.0f, 1000.0f, 0.05f,
+    0.005f, 0.0f, 0.0f, 10.0f, 1800.0f, 0.1f, 36.0f, 1);
 
 // 消息队列
 osMessageQueueId_t rcQueueHandle;
@@ -47,9 +47,10 @@ inline void limit(float &val, float min_val, float max_val) {
 
 // ---------------------- controlTask ----------------------
 //extern IWDG_HandleTypeDef hiwdg;
+float tortial_target_yaw_angle = 0;
 void controlTask(void *argument)
 {
-    const TickType_t control_period = 5; // 5ms
+    const TickType_t control_period = 1; // 1ms
     TickType_t lastWake = osKernelGetTickCount();
     uint8_t rc_raw[32];
     rc.init();
@@ -59,6 +60,15 @@ void controlTask(void *argument)
         // 获取遥控器数据
         if (osMessageQueueGet(rcQueueHandle, rc_raw, NULL, osWaitForever) == osOK)
             rc.handle(rc_raw, 18);
+        // 增量控制
+        float dt = control_period * 0.001f;
+        const DT7_RC::DT7_RC_Data& data = rc.getData();
+
+        //退出下三档重启
+        if (data.s2 == DT7_RC::SWITCH_DOWN)
+        {
+            gimbal_state = GIMBAL_INIT;
+        }
 
         // 初始化零点
         if (gimbal_state == GIMBAL_INIT)
@@ -67,15 +77,13 @@ void controlTask(void *argument)
             pitch_zero_offset = imu.euler_deg_.pitch;
             yaw_zero_offset   = imu.euler_deg_.yaw;
             desired_pitch = 0.0f;
-            desired_yaw   = 0.0f;
+            desired_yaw   = 70.0f;
             gimbal_state = GIMBAL_CONTROL;
         }
 
-        // 增量控制
-        float dt = control_period * 0.001f;
-        const DT7_RC::DT7_RC_Data& data = rc.getData();
-        desired_pitch += data.ch[1] * 5.0f * dt;
-        desired_yaw   += data.ch[0] * 5.0f * dt;
+
+        desired_pitch += data.ch[1] * 2000.0f * dt;
+        desired_yaw   += data.ch[0] * 2000.0f * dt;
         limit(desired_pitch, -30.0f, 30.0f);
         limit(desired_yaw,   -180.0f, 180.0f);
         // PID计算
@@ -128,23 +136,29 @@ void imuTask(void *argument)
 }
 
 // ---------------------- motorTask ----------------------
+CanTxMsg motor_tx_msg;     //调试变量
 void motorTask(void *argument)
 {
     const TickType_t motor_period = 1; // 1ms
     TickType_t lastWake = osKernelGetTickCount();
-
+    CanTxMsg msg;
+    memset(msg.data, 0, sizeof(msg.data));
+    msg.id = 0x1FE;
     while (1)
     {
-        CanTxMsg msg;
-
         pitchMotor.handle();
         pitchMotor.SendTxCanMsg(msg.data);
-        msg.id = 0x1FF;
+
+        for (int i = 0; i < 8; i++) {
+            motor_tx_msg.data[i] = msg.data[i];
+        }
         osMessageQueuePut(canTxQueueHandle, &msg, 0, 0);
 
         yawMotor.handle();
         yawMotor.SendTxCanMsg(msg.data);
-        msg.id = 0x1FF;
+        for (int i = 0; i < 8; i++) {
+            motor_tx_msg.data[i] = msg.data[i];
+        }
         osMessageQueuePut(canTxQueueHandle, &msg, 0, 0);
 
         // ----------周期控制----------
@@ -155,7 +169,9 @@ void motorTask(void *argument)
     }
 }
 
+
 // ---------------------- canTxTask ----------------------
+CanTxMsg tortial_motor_msg;     //调试变量
 extern CAN_HandleTypeDef hcan1;
 void canTxTask(void *argument)
 {
@@ -163,10 +179,14 @@ void canTxTask(void *argument)
     TickType_t lastWake = osKernelGetTickCount();
 
     CanTxMsg msg;
-    CAN_TxHeaderTypeDef tx_header;
-    tx_header.IDE = CAN_ID_STD;
-    tx_header.RTR = CAN_RTR_DATA;
-    tx_header.DLC = 8;
+    CAN_TxHeaderTypeDef tx_header = {
+        .StdId = 0x1FE,
+        .ExtId = 0,
+        .IDE = CAN_ID_STD,
+        .RTR = CAN_RTR_DATA,
+        .DLC = 8,
+        .TransmitGlobalTime = DISABLE,
+      };
 
     while (1)
     {
@@ -175,8 +195,11 @@ void canTxTask(void *argument)
         if (osMessageQueueGet(canTxQueueHandle, &msg, NULL, 100) == osOK)
         {
             tx_header.StdId = msg.id;
-            uint32_t mailbox;
-						HAL_CAN_AddTxMessage(&hcan1, &tx_header, msg.data, &mailbox);
+            //调试
+            for (int i = 0; i < 8; i++) {
+                tortial_motor_msg.data[i] = msg.data[i];
+            }
+            HAL_CAN_AddTxMessage(&hcan1, &tx_header, msg.data, NULL);
         }
 
         // ----------周期控制----------

@@ -4,22 +4,21 @@
 
 #include "DT7_RC.h"
 extern uint8_t stop_flag;
-DT7_RC::DT7_RC() {
 
-}
-
+//遥控器初始化函数
 void DT7_RC::init()
 {
     last_update_time = HAL_GetTick();
     isConnected = false;
 }
 
+//遥控器处理函数
 void DT7_RC::handle(const uint8_t* data, uint8_t size)
 {
     if (data == nullptr || size != 18)
         return;
 
-    // 更新时间戳
+    //时间戳更新
     last_update_time = HAL_GetTick();
     isConnected = true;
 
@@ -41,11 +40,11 @@ void DT7_RC::handle(const uint8_t* data, uint8_t size)
     raw_.key = (int16_t)data[14] | ((int16_t)data[15] << 8);
     raw_.reserve = (int16_t)data[16] | ((int16_t)data[17] << 8);
 
-    //映射
+    //摇杆映射
     for (int i = 0; i < 4; i++)
         dt7_.ch[i] = linearMapping(raw_.ch[i], 364, 1684, -1.0f, 1.0f);
 
-    //开关解析
+    //开关映射
     dt7_.s1 = decodeSwitch(raw_.s1);
     dt7_.s2 = decodeSwitch(raw_.s2);
     if (dt7_.s2 == SWITCH_DOWN)
@@ -54,15 +53,18 @@ void DT7_RC::handle(const uint8_t* data, uint8_t size)
         stop_flag = 0;
 
     //失联更新
-    if (HAL_GetTick() - last_update_time > 100)
+    if (HAL_GetTick() - last_update_time > 100) {
         isConnected = false;
+    }
+
     //断联下三
-        if (isConnected == false)
+    if (isConnected == false)
         {
            stop_flag = 1;
         }
 }
 
+//按钮映射函数
 DT7_RC::SwitchState DT7_RC::decodeSwitch(uint8_t raw)
 {
     switch (raw)
@@ -74,6 +76,7 @@ DT7_RC::SwitchState DT7_RC::decodeSwitch(uint8_t raw)
     }
 }
 
+//摇杆映射函数
 float DT7_RC::linearMapping(int16_t x,
                             int16_t in_min, int16_t in_max,
                             float out_min, float out_max)
