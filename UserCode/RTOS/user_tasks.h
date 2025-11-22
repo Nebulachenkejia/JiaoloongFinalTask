@@ -26,7 +26,7 @@ typedef struct{
 } MotorFeedbackMsg ;
 
 // 云台状态
-typedef enum{ GIMBAL_INIT, GIMBAL_CONTROL, GIMBAL_SELF_CONTROL} GimbalState ;
+typedef enum{ GIMBAL_INIT, GIMBAL_CONTROL, GIMBAL_SELF_CONTROL, GIMBAL_ANGLE_ATEP, GIMBAL_GIVEN_INTENSITY} GimbalState ;
 
 // 公开消息队列句柄（在 tasks.cpp 中定义）
 extern osMessageQueueId_t rcQueueHandle;

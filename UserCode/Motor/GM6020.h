@@ -3,6 +3,7 @@
 
 #include "main.h"
 #include "pid.h"
+#include <cmath>
 #include "string.h"
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +55,7 @@ private:
     uint8_t angle_flag = 0; // 编码器角度初始化标志
 
     // 控制方式
-    enum { TORQUE, SPEED, POSITION_SPEED } control_method_;
+    enum { TORQUE, SPEED, POSITION_SPEED } control_method_, pre_method_;
 
     // 目标与前馈
     float target_speed_ = 0;

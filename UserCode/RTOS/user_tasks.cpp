@@ -18,10 +18,10 @@ IMU imu(0.004f, 0.01f, 1.0f, R_imu_default, gyro_bias_default);
 DT7_RC rc;
 
 // 电机
-GM6020 pitchMotor(0.0f, 0.0f, 0.0f, 1000.0f, 1000.0f, 0.01f,
-    0.007f, 0.0f, 0.0f, 1600.0f, 1800.0f, 0.01f, 36.0f, 4);
-GM6020 yawMotor(4.0f, 0.0f, 200.0f, 10.0f, 1000.0f, 0.05f,
-    0.005f, 0.0f, 0.0f, 10.0f, 1800.0f, 0.1f, 36.0f, 1);
+GM6020 pitchMotor(0.0f, 0.0f, 0.0f, 1000.0f, 1000.0f, 0.1f,
+    0.0f, 0.0f, 0.0f, 1600.0f, 1800.0f, 0.1f, 1.0f, 4);
+GM6020 yawMotor(4.0f, 0.1f, 90.0f, 10.0f, 1000.0f, 0.01f,
+    0.01f, 0.0f, 0.2f, 10.0f, 1800.0f, 0.015f, 1.0f, 1);
 
 // 消息队列
 osMessageQueueId_t rcQueueHandle;
@@ -46,8 +46,10 @@ inline void limit(float &val, float min_val, float max_val) {
 
 
 // ---------------------- controlTask ----------------------
-//extern IWDG_HandleTypeDef hiwdg;
-float tortial_target_yaw_angle = 0;
+extern IWDG_HandleTypeDef hiwdg;
+float tortial_target_yaw_angle = 70;
+float tortial_target_pitch_angle = 0;
+float tortial_target_intensity = 0;
 void controlTask(void *argument)
 {
     const TickType_t control_period = 1; // 1ms
@@ -61,50 +63,78 @@ void controlTask(void *argument)
         if (osMessageQueueGet(rcQueueHandle, rc_raw, NULL, osWaitForever) == osOK)
             rc.handle(rc_raw, 18);
         // 增量控制
-        float dt = control_period * 0.001f;
         const DT7_RC::DT7_RC_Data& data = rc.getData();
 
-        //退出下三档重启
+        //遥控器挡位设置
         if (data.s2 == DT7_RC::SWITCH_DOWN)
         {
             gimbal_state = GIMBAL_INIT;
         }
+        if (data.s2 == DT7_RC::SWITCH_UP) {
+            gimbal_state = GIMBAL_CONTROL;
+        }
+        if (data.s1 == DT7_RC::SWITCH_UP && data.s2 == DT7_RC::SWITCH_MID)
+        {
+            gimbal_state = GIMBAL_ANGLE_ATEP;
+        }
+        //左中右中档进入柔性档
+        if (data.s2 == DT7_RC::SWITCH_MID && data.s1 == DT7_RC::SWITCH_MID)
+        {
+            gimbal_state = GIMBAL_SELF_CONTROL;
+        }
+        if (data.s1 == DT7_RC::SWITCH_DOWN && data.s2 == DT7_RC::SWITCH_MID)
+        {
+            gimbal_state = GIMBAL_GIVEN_INTENSITY;
+        }
 
-        // 初始化零点
+        // 零点设置
         if (gimbal_state == GIMBAL_INIT)
         {
             imu.update();
             pitch_zero_offset = imu.euler_deg_.pitch;
             yaw_zero_offset   = imu.euler_deg_.yaw;
-            desired_pitch = 0.0f;
+            desired_pitch = 20.0f;
             desired_yaw   = 70.0f;
-            gimbal_state = GIMBAL_CONTROL;
         }
 
-
-        desired_pitch += data.ch[1] * 2000.0f * dt;
-        desired_yaw   += data.ch[0] * 2000.0f * dt;
+        float dt = control_period * 0.001f;
+        desired_pitch += data.ch[1] * 800.0f * dt;
+        desired_yaw   += data.ch[0] * 800.0f * dt;
         limit(desired_pitch, -30.0f, 30.0f);
-        limit(desired_yaw,   -180.0f, 180.0f);
+        limit(desired_yaw,   -180.0f, 170.0f);
         // PID计算
         float pitch_feedback = imu.euler_deg_.pitch - pitch_zero_offset;
         float yaw_feedback   = imu.euler_deg_.yaw   - yaw_zero_offset;
+
+        //遥控器控制档
         if (gimbal_state == GIMBAL_CONTROL)
         {
             pitchMotor.SetPosition(desired_pitch, pitch_feedback, 0);
             yawMotor.SetPosition(desired_yaw, yaw_feedback, 0);
         }
-
+        // 柔性档
         if (gimbal_state == GIMBAL_SELF_CONTROL)
         {
             pitchMotor.SetIntensity(pitchMotor.Calfeedforward_intensity(desired_pitch));
             yawMotor.SetIntensity(yawMotor.Calfeedforward_intensity(desired_yaw));
         }
 
+        //角度阶跃档
+        if (gimbal_state == GIMBAL_ANGLE_ATEP)
+        {
+            limit(tortial_target_pitch_angle, -12.0f, 48.0f);
+            limit(tortial_target_yaw_angle,   -180.0f, 180.0f);
+            pitchMotor.SetPosition(tortial_target_pitch_angle, pitch_feedback, 0);
+            yawMotor.SetPosition(tortial_target_yaw_angle, yaw_feedback, 0);
+        }
 
+        if (gimbal_state == GIMBAL_GIVEN_INTENSITY)
+        {
+            pitchMotor.SetIntensity(tortial_target_intensity);
+        }
 
         // 喂狗
-        //HAL_IWDG_Refresh(&hiwdg);
+        HAL_IWDG_Refresh(&hiwdg);
 
         // ----------周期控制----------
         TickType_t now = osKernelGetTickCount();

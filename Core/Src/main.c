@@ -21,6 +21,7 @@
 #include "cmsis_os.h"
 #include "can.h"
 #include "dma.h"
+#include "iwdg.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
@@ -88,8 +89,6 @@ void MX_FREERTOS_Init(void);
   * @retval int
   */
 int main(void)
-
-
 {
 
   /* USER CODE BEGIN 1 */
@@ -118,6 +117,7 @@ int main(void)
   MX_SPI1_Init();
   MX_USART3_UART_Init();
   MX_CAN1_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
   //开启CAN接收
     HAL_CAN_Start(&hcan1);
@@ -164,9 +164,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
