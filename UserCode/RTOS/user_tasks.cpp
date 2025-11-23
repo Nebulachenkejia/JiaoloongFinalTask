@@ -18,8 +18,8 @@ IMU imu(0.004f, 0.01f, 1.0f, R_imu_default, gyro_bias_default);
 DT7_RC rc;
 
 // 电机
-GM6020 pitchMotor(0.0f, 0.0f, 0.0f, 1000.0f, 1000.0f, 0.1f,
-    0.0f, 0.0f, 0.0f, 1600.0f, 1800.0f, 0.1f, 1.0f, 4);
+GM6020 pitchMotor(4.0f, 0.0f, 0.0f, 1000.0f, 1000.0f, 0.1f,
+    0.004, 0.0f, 0.0f, 1600.0f, 1800.0f, 0.1f, 1.0f, 4);
 GM6020 yawMotor(4.0f, 0.1f, 90.0f, 10.0f, 1000.0f, 0.01f,
     0.01f, 0.0f, 0.2f, 10.0f, 1800.0f, 0.015f, 1.0f, 1);
 
@@ -50,6 +50,7 @@ extern IWDG_HandleTypeDef hiwdg;
 float tortial_target_yaw_angle = 70;
 float tortial_target_pitch_angle = 0;
 float tortial_target_intensity = 0;
+float k = 1.0f;
 void controlTask(void *argument)
 {
     const TickType_t control_period = 1; // 1ms
@@ -100,8 +101,8 @@ void controlTask(void *argument)
         float dt = control_period * 0.001f;
         desired_pitch += data.ch[1] * 800.0f * dt;
         desired_yaw   += data.ch[0] * 800.0f * dt;
-        limit(desired_pitch, -30.0f, 30.0f);
         limit(desired_yaw,   -180.0f, 170.0f);
+        limit(tortial_target_pitch_angle, -5.0f, 45.0f);
         // PID计算
         float pitch_feedback = imu.euler_deg_.pitch - pitch_zero_offset;
         float yaw_feedback   = imu.euler_deg_.yaw   - yaw_zero_offset;
@@ -109,22 +110,22 @@ void controlTask(void *argument)
         //遥控器控制档
         if (gimbal_state == GIMBAL_CONTROL)
         {
-            pitchMotor.SetPosition(desired_pitch, pitch_feedback, 0);
+            pitchMotor.SetPosition(desired_pitch, pitch_feedback, pitchMotor.Calfeedforward_intensity(pitchMotor.fdb_angle_));
             yawMotor.SetPosition(desired_yaw, yaw_feedback, 0);
         }
         // 柔性档
         if (gimbal_state == GIMBAL_SELF_CONTROL)
         {
-            pitchMotor.SetIntensity(pitchMotor.Calfeedforward_intensity(desired_pitch));
-            yawMotor.SetIntensity(yawMotor.Calfeedforward_intensity(desired_yaw));
+            pitchMotor.SetIntensity(k * pitchMotor.Calfeedforward_intensity(pitchMotor.fdb_angle_));
+            //yawMotor.SetIntensity(tortial_target_intensity);
         }
 
         //角度阶跃档
         if (gimbal_state == GIMBAL_ANGLE_ATEP)
         {
-            limit(tortial_target_pitch_angle, -12.0f, 48.0f);
-            limit(tortial_target_yaw_angle,   -180.0f, 180.0f);
-            pitchMotor.SetPosition(tortial_target_pitch_angle, pitch_feedback, 0);
+            limit(tortial_target_yaw_angle,   -180.0f, 170.0f);
+            limit(tortial_target_pitch_angle, -5.0f, 45.0f);
+            pitchMotor.SetPosition(tortial_target_pitch_angle, pitch_feedback,  pitchMotor.Calfeedforward_intensity(pitchMotor.fdb_angle_));
             yawMotor.SetPosition(tortial_target_yaw_angle, yaw_feedback, 0);
         }
 

@@ -6,6 +6,9 @@
 #define B4  -1.05449E-6
 #define B5  2.65658E-8
 #define B6  -2.3038E-10
+#define B7         -8.42504E-24
+#define B8          1.17536E-25
+#define B9         -6.39096E-28
 
 extern uint8_t stop_flag;
 
@@ -133,15 +136,23 @@ float GM6020::Calfeedforward_intensity(float target_angle) {
         float x4 = x3 * target_angle;         // x⁴
         float x5 = x4 * target_angle;         // x⁵
         float x6 = x5 * target_angle;         // x⁶
-        return B0 +
+        float x7 = x6 * target_angle;
+        float x8 = x7 * target_angle;
+        float x9 = x8 * target_angle;
+        return 0.8 * (B0 +
                B1 * x1 +
                B2 * x2 +
                B3 * x3 +
                B4 * x4 +
                B5 * x5 +
-               B6 * x6 ;
+               B6 * x6 +
+               B7 * x7 +
+               B8 * x8 +
+               B9 * x9);
+
 
 }
+
 
 float GM6020::linearMapping(uint16_t x,
                         uint16_t in_min, uint16_t in_max,

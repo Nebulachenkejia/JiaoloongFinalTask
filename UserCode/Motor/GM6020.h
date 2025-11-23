@@ -3,7 +3,7 @@
 
 #include "main.h"
 #include "pid.h"
-#include <cmath>
+#include "math.h"
 #include "string.h"
 #ifdef __cplusplus
 extern "C" {
@@ -35,8 +35,6 @@ public:
     void handle();
 
     //前馈
-    float Calfeedforward_intensity(float target_angle);
-
     static float linearMapping(uint16_t x,
                         uint16_t in_min, uint16_t in_max,
                         float out_min, float out_max);
@@ -44,7 +42,8 @@ public:
     // 对外暴露方便调试
     float fdb_angle_ = 0;    // 来自编码器的累计角度（deg，多圈）
     float fdb_speed_ = 0;    // 速度反馈（raw）
-
+    //前馈计算函数
+    float Calfeedforward_intensity(float target_angle);
 
 private:
     // 参数
